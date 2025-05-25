@@ -4,6 +4,11 @@ on:
   push:
     branches:
       - main
+env:
+  ACTIONS_RUNTIME_TOKEN: true
+  ACTIONS_RUNTIME_URL: false
+  ACTIONS_RUNNER_DEBUG: true
+
 
 jobs:
   build:
@@ -31,10 +36,12 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Download Docker image artifact
-      uses: actions/download-artifact@v3
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
       with:
-        name: docker-image
+        name: logs
+        path: log.txt
+        retention-days: 30 # Optionally, but consolidating the task
 
     - name: Run container
       run: docker run -d -p 8000:8000 --name test_container model-registry:latest
@@ -63,8 +70,11 @@ jobs:
           -F "accuracy=0.92" || exit 1
 
     - name: Functional tests (GET /models)
-      run: curl -s http://localhost:8000/models | grep "test-model" || exit 1
+      run: curl -s http://localhost:8000/models | grep "test-model"
 
     - name: Functional tests (GET /models/test-model)
-      run: curl -s http://localhost:8000/models/test-model | grep "0.92" || exit 1
+      run: curl -s http://localhost:8000/models/test-model | grep "0.92"
 
+    - name: Cleanup container
+      if: always()
+      run: docker rm -f test_container || true

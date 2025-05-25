@@ -10,7 +10,6 @@ env:
   ACTIONS_RUNTIME_URL: false
   ACTIONS_RUNNER_DEBUG: true
 
-
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -29,7 +28,7 @@ jobs:
         run: echo "tag=model-registry:${{ github.sha }}" >> $GITHUB_OUTPUT
 
       - name: Build Docker image
-        run: docker build -t ${{ steps.set_tag.outputs.tag }} .
+        run: docker build -t model-registry:${{ github.sha }} .
 
   test:
     needs: build
@@ -37,7 +36,7 @@ jobs:
 
     steps:
       - name: Run container
-        run: docker run -d -p 8000:8000 --name test_container ${{ needs.build.outputs.image_tag }}
+        run: docker run -d -p 8000:8000 --name test_container model-registry:${{ github.sha }}
 
       - name: Wait for API to become ready
         run: |
@@ -86,4 +85,4 @@ jobs:
 
       - name: Remove Docker image
         if: always()
-        run: docker rmi ${{ needs.build.outputs.image_tag }} || true
+        run: docker rmi model-registry:${{ github.sha }} || true

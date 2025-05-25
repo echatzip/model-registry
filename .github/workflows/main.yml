@@ -25,3 +25,46 @@ jobs:
     - name: Build Docker image
       run: docker build -t model-registry:latest .
 
+
+  test:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Download Docker image artifact
+      uses: actions/download-artifact@v3
+      with:
+        name: docker-image
+
+    - name: Run container
+      run: docker run -d -p 8000:8000 --name test_container model-registry:latest
+
+    - name: Wait for API to become ready
+      run: |
+        for i in {1..10}; do
+          if curl -s http://localhost:8000/models; then
+            echo "API is up"
+            exit 0
+          fi
+          echo "Waiting for API..."
+          sleep 3
+        done
+        echo "API failed to start"
+        docker logs test_container
+        exit 1
+
+    - name: Functional tests (POST /models)
+      run: |
+        echo "dummy" > model.pkl
+        curl -X POST http://localhost:8000/models \
+          -F "model_file=@model.pkl" \
+          -F "name=test-model" \
+          -F "version=1.0" \
+          -F "accuracy=0.92" || exit 1
+
+    - name: Functional tests (GET /models)
+      run: curl -s http://localhost:8000/models | grep "test-model" || exit 1
+
+    - name: Functional tests (GET /models/test-model)
+      run: curl -s http://localhost:8000/models/test-model | grep "0.92" || exit 1
+

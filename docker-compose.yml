@@ -1,0 +1,7 @@
+services:
+  model_registry:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./uploads:/app/uploads
